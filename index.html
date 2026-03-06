@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼音大比拼 - 多人同步版</title>
+    <!-- 引入 React 和 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        body { font-family: 'ZCOOL KuaiLe', cursive, sans-serif; margin: 0; overflow: hidden; }
+        .keyboard-btn:active { transform: scale(0.9); background-color: #f1f5f9; }
+        .countdown-pulse { animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const wordList = [
+            { word: "历尽", pinyin: "lijin" },
+            { word: "腐败", pinyin: "fubai" },
+            { word: "掀起", pinyin: "xianqi" },
+            { word: "战争", pinyin: "zhanzheng" },
+            { word: "城镇", pinyin: "chengzhen" },
+            { word: "拯救", pinyin: "zhengjiu" },
+            { word: "报效", pinyin: "baoxiao" }
+        ];
+
+        const rows = [
+            "qwertyuiop".split(""),
+            "asdfghjkl".split(""),
+            "zxcvbnm".split("")
+        ];
+
+        function App() {
+            const [inRoom, setInRoom] = useState(false);
+            const [roomID, setRoomID] = useState("");
+            const [playerRole, setPlayerRole] = useState('p1');
+            const [startCountdown, setStartCountdown] = useState(null);
+            const [gameStarted, setGameStarted] = useState(false);
+            const [gameState, setGameState] = useState({
+                p1Score: 0, p2Score: 0,
+                p1Input: "", p2Input: "",
+                p1WordIdx: 0, p2WordIdx: 1,
+                timeElapsed: 0, isOver: false,
+                p2Joined: false
+            });
+
+            // 模拟多人同步：当点击“开始”且是双人模式时触发倒计时
+            useEffect(() => {
+                if (inRoom && gameState.p2Joined && !gameStarted && startCountdown === null) {
+                    let count = 3;
+                    setStartCountdown(count);
+                    const timer = setInterval(() => {
+                        count--;
+                        if (count === 0) {
+                            clearInterval(timer);
+                            setStartCountdown("GO!");
+                            setTimeout(() => {
+                                setStartCountdown(null);
+                                setGameStarted(true);
+                            }, 800);
+                        } else {
+                            setStartCountdown(count);
+                        }
+                    }, 1000);
+                }
+            }, [inRoom, gameState.p2Joined]);
+
+            // 计时器
+            useEffect(() => {
+                if (gameStarted && !gameState.isOver) {
+                    const timer = setInterval(() => {
+                        setGameState(prev => ({ ...prev, timeElapsed: prev.timeElapsed + 1 }));
+                    }, 1000);
+                    return () => clearInterval(timer);
+                }
+            }, [gameStarted, gameState.isOver]);
+
+            const handleInput = (char) => {
+                if (!gameStarted || gameState.isOver) return;
+                const key = playerRole === 'p1' ? 'p1Input' : 'p2Input';
+                setGameState(prev => ({ ...prev, [key]: prev[key] + char }));
+            };
+
+            const clearInput = () => {
+                const key = playerRole === 'p1' ? 'p1Input' : 'p2Input';
+                setGameState(prev => ({ ...prev, [key]: "" }));
+            };
+
+            const checkAnswer = () => {
+                const role = playerRole;
+                const currentIdx = gameState[`${role}WordIdx`];
+                const currentInput = gameState[`${role}Input`];
+                const correct = wordList[currentIdx].pinyin;
+
+                if (currentInput.toLowerCase() === correct) {
+                    const nextIdx = Math.floor(Math.random() * wordList.length);
+                    const nextScore = gameState[`${role}Score`] + 1;
+                    setGameState(prev => ({
+                        ...prev,
+                        [`${role}Score`]: nextScore,
+                        [`${role}Input`]: "",
+                        [`${role}WordIdx`]: nextIdx,
+                        isOver: nextScore >= 10
+                    }));
+                } else {
+                    clearInput();
+                }
+            };
+
+            if (!inRoom) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-indigo-900 text-white p-6">
+                        <h1 className="text-5xl font-bold mb-8">拼音大比拼 ☁️</h1>
+                        <div className="bg-white p-8 rounded-2xl shadow-2xl text-gray-800 w-full max-w-md">
+                            <p className="mb-4 font-bold text-center">输入房间号并选择角色：</p>
+                            <input 
+                                type="text" 
+                                value={roomID} 
+                                onChange={(e) => setRoomID(e.target.value)}
+                                className="w-full border-2 border-indigo-100 p-3 rounded-xl mb-6 text-center text-2xl font-bold uppercase outline-none focus:border-indigo-500"
+                                placeholder="房间号 (如: 04)"
+                            />
+                            <div className="flex gap-4 mb-6">
+                                <button onClick={() => setPlayerRole('p1')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${playerRole === 'p1' ? 'bg-blue-600 text-white ring-4 ring-blue-200' : 'bg-gray-100 text-gray-400'}`}>玩家 1</button>
+                                <button onClick={() => setPlayerRole('p2')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${playerRole === 'p2' ? 'bg-pink-600 text-white ring-4 ring-pink-200' : 'bg-gray-100 text-gray-400'}`}>玩家 2</button>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setInRoom(true);
+                                    // 模拟第二个玩家加入
+                                    setTimeout(() => setGameState(prev => ({...prev, p2Joined: true})), 1000);
+                                }} 
+                                className="w-full bg-indigo-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-indigo-700 shadow-lg"
+                            >
+                                进入游戏
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                    {/* Header */}
+                    <div className="p-2 flex justify-between items-center text-white px-6 bg-black/10">
+                        <div className="text-lg bg-blue-600 px-4 py-1 rounded-full border border-white font-bold shadow-inner">⏱️ {gameState.timeElapsed}s</div>
+                        <div className="text-xl font-bold tracking-widest drop-shadow-md">房间: {roomID}</div>
+                        <div className="text-lg bg-pink-500 px-4 py-1 rounded-full border border-white font-bold shadow-inner">🏆 目标: 10分</div>
+                    </div>
+
+                    {/* Main Game Area */}
+                    <div className="flex flex-1 p-3 gap-3 overflow-hidden mb-1">
+                        {/* Player 1 Card */}
+                        <div className={`flex-1 flex flex-col bg-white/95 rounded-2xl shadow-xl p-4 border-t-8 border-blue-500 transition-all ${playerRole === 'p2' ? 'opacity-60' : 'z-10'}`}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-lg font-bold text-blue-600">P1 {playerRole === 'p1' && "(你)"}</span>
+                                <span className="text-xl font-bold bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">得分: {gameState.p1Score}</span>
+                            </div>
+                            <div className="flex-1 flex flex-col items-center justify-between py-2">
+                                <div className="text-6xl font-bold text-gray-800 tracking-tighter">{wordList[gameState.p1WordIdx].word}</div>
+                                <input readOnly value={gameState.p1Input} className="w-full text-center text-3xl font-bold border-b-4 border-blue-500 outline-none text-blue-600 bg-transparent" placeholder="等待输入..." />
+                                
+                                {playerRole === 'p1' && (
+                                    <div className="w-full flex flex-col items-center gap-2">
+                                        <div className="flex flex-col gap-1 w-full items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                            {rows.map((row, i) => (
+                                                <div key={i} className="flex gap-1">
+                                                    {row.map(char => (
+                                                        <button key={char} onClick={() => handleInput(char)} className="keyboard-btn w-8 h-10 md:w-10 md:h-12 bg-white rounded-lg shadow font-bold text-lg border border-gray-200 hover:bg-blue-50">{char}</button>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-4 w-full justify-center">
+                                            <button onClick={clearInput} className="bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold hover:bg-gray-300">清除</button>
+                                            <button onClick={checkAnswer} className="bg-blue-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg hover:bg-blue-600 active:translate-y-1 transition-all">确定</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Player 2 Card */}
+                        <div className={`flex-1 flex flex-col bg-white/95 rounded-2xl shadow-xl p-4 border-t-8 border-pink-500 transition-all ${playerRole === 'p1' ? 'opacity-60' : 'z-10'}`}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-lg font-bold text-pink-600">P2 {playerRole === 'p2' && "(你)"}</span>
+                                <span className="text-xl font-bold bg-pink-100 text-pink-600 px-3 py-1 rounded-lg">得分: {gameState.p2Score}</span>
+                            </div>
+                            <div className="flex-1 flex flex-col items-center justify-between py-2">
+                                <div className="text-6xl font-bold text-gray-800 tracking-tighter">{wordList[gameState.p2WordIdx].word}</div>
+                                <input readOnly value={gameState.p2Input} className="w-full text-center text-3xl font-bold border-b-4 border-pink-500 outline-none text-pink-600 bg-transparent" placeholder="等待输入..." />
+                                
+                                {playerRole === 'p2' && (
+                                    <div className="w-full flex flex-col items-center gap-2">
+                                        <div className="flex flex-col gap-1 w-full items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                            {rows.map((row, i) => (
+                                                <div key={i} className="flex gap-1">
+                                                    {row.map(char => (
+                                                        <button key={char} onClick={() => handleInput(char)} className="keyboard-btn w-8 h-10 md:w-10 md:h-12 bg-white rounded-lg shadow font-bold text-lg border border-gray-200 hover:bg-pink-50">{char}</button>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-4 w-full justify-center">
+                                            <button onClick={clearInput} className="bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold hover:bg-gray-300">清除</button>
+                                            <button onClick={checkAnswer} className="bg-pink-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg hover:bg-pink-600 active:translate-y-1 transition-all">确定</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Countdown Overlay */}
+                    {startCountdown !== null && (
+                        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center">
+                            <div className="text-[12rem] font-bold text-yellow-400 countdown-pulse drop-shadow-2xl">
+                                {startCountdown}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Winner Overlay */}
+                    {gameState.isOver && (
+                        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-white">
+                            <h2 className="text-7xl font-bold mb-4 text-yellow-400 animate-bounce">🏆 比赛结束！</h2>
+                            <p className="text-3xl mb-10 opacity-80">总计用时: {gameState.timeElapsed} 秒</p>
+                            <button onClick={() => location.reload()} className="bg-white text-indigo-900 px-16 py-4 rounded-full text-2xl font-bold hover:bg-yellow-400 transition-all">再玩一局</button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
