@@ -2,252 +2,401 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拼音大比拼 - 多人同步版</title>
-    <!-- 引入 React 和 Babel -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>亲吻实验室 - 15秒挑战版</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
-        body { font-family: 'ZCOOL KuaiLe', cursive, sans-serif; margin: 0; overflow: hidden; }
-        .keyboard-btn:active { transform: scale(0.9); background-color: #f1f5f9; }
-        .countdown-pulse { animation: pulse 1s infinite; }
+        :root {
+            --boy-color: #4facfe;
+            --girl-color: #ff758c;
+            --main-red: #ff4d6d;
+            --gold: #ffd700;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff5f7;
+            transition: background-color 0.8s ease;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .header-info {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 20px 0;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+
+        .score-board {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 15px;
+            min-width: 90px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-val { font-size: 28px; font-weight: bold; }
+        .stat-label { font-size: 12px; color: #888; }
+
+        .turn-indicator {
+            margin-top: 20px;
+            padding: 12px 40px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.5s;
+            z-index: 30;
+        }
+
+        .boy-turn { background: var(--boy-color); }
+        .girl-turn { background: var(--girl-color); }
+
+        .timer-container {
+            margin-top: 20px;
+            width: 80%;
+            height: 12px;
+            background: #eee;
+            border-radius: 6px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 2px solid white;
+        }
+
+        #timer-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, #ff4d6d, #ff8fa3);
+            transition: width 0.1s linear;
+        }
+
+        .main-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: relative;
+        }
+
+        .box-container {
+            width: 160px;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        #blind-box {
+            font-size: 100px;
+            user-select: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .shake { animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(8deg); }
+            75% { transform: rotate(-8deg); }
+        }
+
+        .result-card {
+            margin-top: 10px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s;
+        }
+
+        .result-card.show { opacity: 1; transform: translateY(0); }
+        .kiss-title { font-size: 28px; font-weight: bold; color: var(--main-red); margin-bottom: 8px; }
+        .kiss-desc { font-size: 18px; color: #444; max-width: 280px; line-height: 1.4; padding: 0 10px; }
+
+        /* 侧边按钮：悬浮在屏幕右侧中央 */
+        .btn-done {
+            position: fixed;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%) translateX(150%);
+            width: 90px;
+            height: 90px;
+            background: var(--main-red);
+            color: white;
+            border: 4px solid white;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(255, 77, 109, 0.4);
+            z-index: 500;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .btn-done.active {
+            transform: translateY(-50%) translateX(0);
+            animation: pulse 2s infinite;
+        }
+
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.5); opacity: 0.7; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 77, 109, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0); }
+        }
+
+        .history-bar {
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #999;
+        }
+
+        #winner-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #ff4d6d, #ff8fa3);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            text-align: center;
+        }
+
+        .reward-box {
+            background: white;
+            color: var(--main-red);
+            padding: 30px;
+            border-radius: 30px;
+            margin: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .heart-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: flyUp 1.2s ease-out forwards;
+            z-index: 600;
+        }
+
+        @keyframes flyUp {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -300px) rotate(45deg) scale(2); opacity: 0; }
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+<div class="header-info">
+    <div class="score-board" style="border-bottom: 4px solid var(--boy-color)">
+        <span class="stat-label">男生得分</span>
+        <span id="boy-score" class="stat-val" style="color: var(--boy-color)">0</span>
+    </div>
+    <div class="score-board" style="border-bottom: 4px solid var(--girl-color)">
+        <span class="stat-label">女生得分</span>
+        <span id="girl-score" class="stat-val" style="color: var(--girl-color)">0</span>
+    </div>
+</div>
 
-        const wordList = [
-            { word: "历尽", pinyin: "lijin" },
-            { word: "腐败", pinyin: "fubai" },
-            { word: "掀起", pinyin: "xianqi" },
-            { word: "战争", pinyin: "zhanzheng" },
-            { word: "城镇", pinyin: "chengzhen" },
-            { word: "拯救", pinyin: "zhengjiu" },
-            { word: "报效", pinyin: "baoxiao" }
-        ];
+<div id="turn-display" class="turn-indicator boy-turn">男生准备抽盒</div>
 
-        const rows = [
-            "qwertyuiop".split(""),
-            "asdfghjkl".split(""),
-            "zxcvbnm".split("")
-        ];
+<div class="timer-container" id="timer-ui">
+    <div id="timer-bar"></div>
+</div>
 
-        function App() {
-            const [inRoom, setInRoom] = useState(false);
-            const [roomID, setRoomID] = useState("");
-            const [playerRole, setPlayerRole] = useState('p1');
-            const [startCountdown, setStartCountdown] = useState(null);
-            const [gameStarted, setGameStarted] = useState(false);
-            const [gameState, setGameState] = useState({
-                p1Score: 0, p2Score: 0,
-                p1Input: "", p2Input: "",
-                p1WordIdx: 0, p2WordIdx: 1,
-                timeElapsed: 0, isOver: false,
-                p2Joined: false
-            });
+<div class="main-stage">
+    <div class="box-container" onclick="openBox()">
+        <div id="blind-box" class="shake">🎁</div>
+    </div>
+    
+    <div id="result" class="result-card">
+        <div id="res-name" class="kiss-title">心跳契约</div>
+        <div id="res-desc" class="kiss-desc">点击礼盒开启 15 秒限时挑战</div>
+    </div>
+</div>
 
-            // 模拟多人同步：当点击“开始”且是双人模式时触发倒计时
-            useEffect(() => {
-                if (inRoom && gameState.p2Joined && !gameStarted && startCountdown === null) {
-                    let count = 3;
-                    setStartCountdown(count);
-                    const timer = setInterval(() => {
-                        count--;
-                        if (count === 0) {
-                            clearInterval(timer);
-                            setStartCountdown("GO!");
-                            setTimeout(() => {
-                                setStartCountdown(null);
-                                setGameStarted(true);
-                            }, 800);
-                        } else {
-                            setStartCountdown(count);
-                        }
-                    }, 1000);
-                }
-            }, [inRoom, gameState.p2Joined]);
+<!-- 侧边确认按钮 -->
+<button id="done-btn" class="btn-done" onclick="finishTask()">我<br>亲完了</button>
 
-            // 计时器
-            useEffect(() => {
-                if (gameStarted && !gameState.isOver) {
-                    const timer = setInterval(() => {
-                        setGameState(prev => ({ ...prev, timeElapsed: prev.timeElapsed + 1 }));
-                    }, 1000);
-                    return () => clearInterval(timer);
-                }
-            }, [gameStarted, gameState.isOver]);
+<div class="history-bar">
+    ⏱️ 警告：超过 15 秒未点击按钮将判定为失败
+</div>
 
-            const handleInput = (char) => {
-                if (!gameStarted || gameState.isOver) return;
-                const key = playerRole === 'p1' ? 'p1Input' : 'p2Input';
-                setGameState(prev => ({ ...prev, [key]: prev[key] + char }));
-            };
+<div id="winner-modal">
+    <div style="font-size: 60px;">👑</div>
+    <h1 id="winner-role" style="font-size: 36px; margin: 10px 0;">获胜者</h1>
+    <div class="reward-box">
+        <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">🎁 终极奖赏：</div>
+        <div style="font-size: 28px; font-weight: 900; line-height: 1.2; text-decoration: underline;">亲吻你最喜欢<br>对方的部位</div>
+    </div>
+    <button style="padding: 12px 40px; border-radius: 50px; border:none; font-weight:bold; color:var(--main-red); cursor:pointer;" onclick="location.reload()">重新开始</button>
+</div>
 
-            const clearInput = () => {
-                const key = playerRole === 'p1' ? 'p1Input' : 'p2Input';
-                setGameState(prev => ({ ...prev, [key]: "" }));
-            };
+<script>
+    // 统一设置所有任务时间为 15 秒
+    const CHALLENGE_TIME = 15;
 
-            const checkAnswer = () => {
-                const role = playerRole;
-                const currentIdx = gameState[`${role}WordIdx`];
-                const currentInput = gameState[`${role}Input`];
-                const correct = wordList[currentIdx].pinyin;
+    const kisses = [
+        { name: "额头亲亲", emoji: "✨", desc: "亲吻对方额头" },
+        { name: "蝴蝶之吻", emoji: "🧚", desc: "用睫毛轻扫对方脸颊" },
+        { name: "脸颊啵啵", emoji: "💕", desc: "在 TA 的双颊各留一个响吻" },
+        { name: "鼻尖轻碰", emoji: "🐰", desc: "鼻尖蹭鼻尖三下" },
+        { name: "耳垂私语", emoji: "👂", desc: "亲吻耳垂并耳语一句悄悄话" },
+        { name: "颈间深嗅", emoji: "🩸", desc: "深嗅对方颈部并亲吻锁骨" },
+        { name: "法式深吻", emoji: "👅", desc: "完成一个缠绵热吻" },
+        { name: "咬唇轻吻", emoji: "⚡", desc: "轻轻咬一下对方的下唇" },
+        { name: "背后拥吻", emoji: "🫂", desc: "从后面抱住并亲吻后颈" },
+        { name: "心跳之吻", emoji: "💓", desc: "亲吻对方左胸口位置" }
+    ];
 
-                if (currentInput.toLowerCase() === correct) {
-                    const nextIdx = Math.floor(Math.random() * wordList.length);
-                    const nextScore = gameState[`${role}Score`] + 1;
-                    setGameState(prev => ({
-                        ...prev,
-                        [`${role}Score`]: nextScore,
-                        [`${role}Input`]: "",
-                        [`${role}WordIdx`]: nextIdx,
-                        isOver: nextScore >= 10
-                    }));
-                } else {
-                    clearInput();
-                }
-            };
+    let game = {
+        turn: 'boy',
+        busy: false,
+        scores: { boy: 0, girl: 0 },
+        timer: null,
+        target: 6
+    };
 
-            if (!inRoom) {
-                return (
-                    <div className="flex flex-col items-center justify-center h-screen bg-indigo-900 text-white p-6">
-                        <h1 className="text-5xl font-bold mb-8">拼音大比拼 ☁️</h1>
-                        <div className="bg-white p-8 rounded-2xl shadow-2xl text-gray-800 w-full max-w-md">
-                            <p className="mb-4 font-bold text-center">输入房间号并选择角色：</p>
-                            <input 
-                                type="text" 
-                                value={roomID} 
-                                onChange={(e) => setRoomID(e.target.value)}
-                                className="w-full border-2 border-indigo-100 p-3 rounded-xl mb-6 text-center text-2xl font-bold uppercase outline-none focus:border-indigo-500"
-                                placeholder="房间号 (如: 04)"
-                            />
-                            <div className="flex gap-4 mb-6">
-                                <button onClick={() => setPlayerRole('p1')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${playerRole === 'p1' ? 'bg-blue-600 text-white ring-4 ring-blue-200' : 'bg-gray-100 text-gray-400'}`}>玩家 1</button>
-                                <button onClick={() => setPlayerRole('p2')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${playerRole === 'p2' ? 'bg-pink-600 text-white ring-4 ring-pink-200' : 'bg-gray-100 text-gray-400'}`}>玩家 2</button>
-                            </div>
-                            <button 
-                                onClick={() => {
-                                    setInRoom(true);
-                                    // 模拟第二个玩家加入
-                                    setTimeout(() => setGameState(prev => ({...prev, p2Joined: true})), 1000);
-                                }} 
-                                className="w-full bg-indigo-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-indigo-700 shadow-lg"
-                            >
-                                进入游戏
-                            </button>
-                        </div>
-                    </div>
-                );
+    const box = document.getElementById('blind-box');
+    const resultCard = document.getElementById('result');
+    const doneBtn = document.getElementById('done-btn');
+    const timerUI = document.getElementById('timer-ui');
+    const timerBar = document.getElementById('timer-bar');
+
+    function openBox() {
+        if (game.busy) return;
+        game.busy = true;
+
+        box.classList.remove('shake');
+        box.style.transform = "scale(0.5) rotate(720deg)";
+        box.style.opacity = "0";
+        resultCard.classList.remove('show');
+        doneBtn.classList.remove('active');
+
+        setTimeout(() => {
+            const rand = kisses[Math.floor(Math.random() * kisses.length)];
+            box.innerText = rand.emoji;
+            box.style.transform = "scale(1.2) rotate(0deg)";
+            box.style.opacity = "1";
+            
+            document.getElementById('res-name').innerText = rand.name;
+            document.getElementById('res-desc').innerText = rand.desc;
+            resultCard.classList.add('show');
+            
+            startCountdown(CHALLENGE_TIME);
+        }, 600);
+    }
+
+    function startCountdown(sec) {
+        let current = sec;
+        timerUI.style.opacity = "1";
+        doneBtn.classList.add('active'); // 侧边滑入
+        
+        // 确保进度条初始是满的
+        timerBar.style.width = "100%";
+
+        game.timer = setInterval(() => {
+            current -= 0.1;
+            const p = (current / sec) * 100;
+            timerBar.style.width = p + "%";
+
+            if (current <= 0) {
+                failChallenge();
             }
+        }, 100);
+    }
 
-            return (
-                <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                    {/* Header */}
-                    <div className="p-2 flex justify-between items-center text-white px-6 bg-black/10">
-                        <div className="text-lg bg-blue-600 px-4 py-1 rounded-full border border-white font-bold shadow-inner">⏱️ {gameState.timeElapsed}s</div>
-                        <div className="text-xl font-bold tracking-widest drop-shadow-md">房间: {roomID}</div>
-                        <div className="text-lg bg-pink-500 px-4 py-1 rounded-full border border-white font-bold shadow-inner">🏆 目标: 10分</div>
-                    </div>
+    function finishTask() {
+        if (!game.timer) return; // 防止重复点击或非法点击
 
-                    {/* Main Game Area */}
-                    <div className="flex flex-1 p-3 gap-3 overflow-hidden mb-1">
-                        {/* Player 1 Card */}
-                        <div className={`flex-1 flex flex-col bg-white/95 rounded-2xl shadow-xl p-4 border-t-8 border-blue-500 transition-all ${playerRole === 'p2' ? 'opacity-60' : 'z-10'}`}>
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-lg font-bold text-blue-600">P1 {playerRole === 'p1' && "(你)"}</span>
-                                <span className="text-xl font-bold bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">得分: {gameState.p1Score}</span>
-                            </div>
-                            <div className="flex-1 flex flex-col items-center justify-between py-2">
-                                <div className="text-6xl font-bold text-gray-800 tracking-tighter">{wordList[gameState.p1WordIdx].word}</div>
-                                <input readOnly value={gameState.p1Input} className="w-full text-center text-3xl font-bold border-b-4 border-blue-500 outline-none text-blue-600 bg-transparent" placeholder="等待输入..." />
-                                
-                                {playerRole === 'p1' && (
-                                    <div className="w-full flex flex-col items-center gap-2">
-                                        <div className="flex flex-col gap-1 w-full items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
-                                            {rows.map((row, i) => (
-                                                <div key={i} className="flex gap-1">
-                                                    {row.map(char => (
-                                                        <button key={char} onClick={() => handleInput(char)} className="keyboard-btn w-8 h-10 md:w-10 md:h-12 bg-white rounded-lg shadow font-bold text-lg border border-gray-200 hover:bg-blue-50">{char}</button>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex gap-4 w-full justify-center">
-                                            <button onClick={clearInput} className="bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold hover:bg-gray-300">清除</button>
-                                            <button onClick={checkAnswer} className="bg-blue-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg hover:bg-blue-600 active:translate-y-1 transition-all">确定</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Player 2 Card */}
-                        <div className={`flex-1 flex flex-col bg-white/95 rounded-2xl shadow-xl p-4 border-t-8 border-pink-500 transition-all ${playerRole === 'p1' ? 'opacity-60' : 'z-10'}`}>
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-lg font-bold text-pink-600">P2 {playerRole === 'p2' && "(你)"}</span>
-                                <span className="text-xl font-bold bg-pink-100 text-pink-600 px-3 py-1 rounded-lg">得分: {gameState.p2Score}</span>
-                            </div>
-                            <div className="flex-1 flex flex-col items-center justify-between py-2">
-                                <div className="text-6xl font-bold text-gray-800 tracking-tighter">{wordList[gameState.p2WordIdx].word}</div>
-                                <input readOnly value={gameState.p2Input} className="w-full text-center text-3xl font-bold border-b-4 border-pink-500 outline-none text-pink-600 bg-transparent" placeholder="等待输入..." />
-                                
-                                {playerRole === 'p2' && (
-                                    <div className="w-full flex flex-col items-center gap-2">
-                                        <div className="flex flex-col gap-1 w-full items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
-                                            {rows.map((row, i) => (
-                                                <div key={i} className="flex gap-1">
-                                                    {row.map(char => (
-                                                        <button key={char} onClick={() => handleInput(char)} className="keyboard-btn w-8 h-10 md:w-10 md:h-12 bg-white rounded-lg shadow font-bold text-lg border border-gray-200 hover:bg-pink-50">{char}</button>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex gap-4 w-full justify-center">
-                                            <button onClick={clearInput} className="bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold hover:bg-gray-300">清除</button>
-                                            <button onClick={checkAnswer} className="bg-pink-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg hover:bg-pink-600 active:translate-y-1 transition-all">确定</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Countdown Overlay */}
-                    {startCountdown !== null && (
-                        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center">
-                            <div className="text-[12rem] font-bold text-yellow-400 countdown-pulse drop-shadow-2xl">
-                                {startCountdown}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Winner Overlay */}
-                    {gameState.isOver && (
-                        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-white">
-                            <h2 className="text-7xl font-bold mb-4 text-yellow-400 animate-bounce">🏆 比赛结束！</h2>
-                            <p className="text-3xl mb-10 opacity-80">总计用时: {gameState.timeElapsed} 秒</p>
-                            <button onClick={() => location.reload()} className="bg-white text-indigo-900 px-16 py-4 rounded-full text-2xl font-bold hover:bg-yellow-400 transition-all">再玩一局</button>
-                        </div>
-                    )}
-                </div>
-            );
+        clearInterval(game.timer);
+        game.timer = null;
+        timerUI.style.opacity = "0";
+        doneBtn.classList.remove('active'); // 侧边滑回
+        
+        // 成功得分
+        game.scores[game.turn]++;
+        document.getElementById(game.turn + '-score').innerText = game.scores[game.turn];
+        
+        celebrate(true);
+        
+        if (game.scores[game.turn] >= game.target) {
+            setTimeout(showWin, 500);
+        } else {
+            setTimeout(nextTurn, 1500);
         }
+    }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    function failChallenge() {
+        clearInterval(game.timer);
+        game.timer = null;
+        timerUI.style.opacity = "0";
+        doneBtn.classList.remove('active');
+        
+        celebrate(false);
+        document.getElementById('res-name').innerText = "时间到！";
+        document.getElementById('res-desc').innerText = "超过 15 秒未确认，挑战失败 💔";
+        
+        setTimeout(nextTurn, 2500);
+    }
+
+    function nextTurn() {
+        game.turn = (game.turn === 'boy') ? 'girl' : 'boy';
+        game.busy = false;
+        
+        const turnEl = document.getElementById('turn-display');
+        turnEl.innerText = (game.turn === 'boy' ? "男生" : "女生") + "准备抽盒";
+        turnEl.className = "turn-indicator " + (game.turn === 'boy' ? "boy-turn" : "girl-turn");
+        
+        box.innerText = "🎁";
+        box.classList.add('shake');
+        resultCard.classList.remove('show');
+    }
+
+    function celebrate(ok) {
+        for(let i=0; i<15; i++) {
+            const p = document.createElement('div');
+            p.className = 'heart-particle';
+            p.innerText = ok ? ['❤️','💖','✨','💋'][Math.floor(Math.random()*4)] : '💔';
+            p.style.left = '50%';
+            p.style.top = '50%';
+            p.style.fontSize = (Math.random()*20+20)+'px';
+            p.style.marginLeft = (Math.random()-0.5)*300 + 'px';
+            p.style.marginTop = (Math.random()-0.5)*200 + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1200);
+        }
+    }
+
+    function showWin() {
+        const modal = document.getElementById('winner-modal');
+        document.getElementById('winner-role').innerText = (game.turn === 'boy' ? "男生" : "女生") + " 获胜！";
+        modal.style.display = 'flex';
+    }
+</script>
 </body>
 </html>
